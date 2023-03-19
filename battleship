@@ -1,0 +1,370 @@
+package battleship;
+
+import javax.management.ConstructorParameters;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.Arrays;
+import java.util.Scanner;
+
+public class Main {
+
+    final static int MAPSIZE = 11;
+    private static int shipHits1 = 0; // Max is 17 ship hits
+    private static int shipHits2 = 0; // Max is 17 ship hits
+    private static boolean isSank1 = false;
+    private static boolean isSank2 = false;
+
+    public static void main(String[] args) {
+        // Write your code here
+
+        //Create a map and print it
+        int[][] map1 = createMap();
+        int[][] map2 = createMap();
+        int[][] mapFogOfWar1 = createMap();
+        int[][] mapFogOfWar2 = createMap();
+        printMap(map1);
+
+        //put the ships on the map with user input
+        System.out.println("Player 1, place your ships on the game field");
+        shipPutOntheMap(map1);
+        passMove();
+        System.out.println("Player 2, place your ships to the game field");
+        shipPutOntheMap(map2);
+        passMove();
+
+        while (shipHits1 < 17 || shipHits2 < 17) {
+            printmapForPlayer(map1, mapFogOfWar2, 1);
+            cannonShot(map2, mapFogOfWar2, 1);
+            if (shipHits1 > 16)
+                break;
+            passMove();
+
+            printmapForPlayer(map2, mapFogOfWar1, 2);
+            cannonShot(map1, mapFogOfWar1, 2);
+            if (shipHits2 > 16)
+                break;
+            passMove();
+        }
+
+        System.out.print("Player " + (shipHits1 > 16 ? 1 : 2) + " You sank the last ship. You won. Congratulations!");
+    }
+
+    public static int[][] createMap() {
+        int[][] map = new int[11][11];
+
+        for (int i = 0; i < MAPSIZE; i++) {
+            map[0][i] = i;
+        }
+
+        int aNum = 'A';
+        for (int i = 1; i < MAPSIZE; i++) {
+            map[i][0] = aNum;
+            aNum++;
+        }
+
+        for (int i = 1; i < MAPSIZE; i++) {
+            for (int j = 1; j < MAPSIZE; j++) {
+                map[i][j] = '~';
+            }
+        }
+
+        return map;
+    }
+
+    public static void printMap(int[][] map) {
+        System.out.print("  ");
+
+        for (int i = 1; i < MAPSIZE; i++) {
+            System.out.print(map[0][i] + " ");
+        }
+        System.out.print("\n");
+
+        for (int i = 1; i < MAPSIZE; i++) {
+            for (int j = 0; j < MAPSIZE; j++) {
+                System.out.printf("%c ", map[i][j]);
+            }
+            System.out.print("\n");
+        }
+        System.out.print("\n");
+    }
+
+    public static void shipPlace(int[][] map, int shipSize, String shipName) {
+        Scanner in = new Scanner(System.in);
+        int corA1;
+        int corA2;
+        int corB1;
+        int corB2;
+        int givenShipSize;
+        boolean isShipPut = false;
+
+        System.out.println("Enter the coordinates of the " + shipName + " (" + shipSize + " cells):\n");
+        String cord = in.nextLine();
+        System.out.print("\n");
+
+        corA1 = getCord(cord, 1);
+        corA2 = getCord(cord, 2);
+        corB1 = getCord(cord, 3);
+        corB2 = getCord(cord, 4);
+
+        givenShipSize = Math.abs(Math.abs(corA1 - corB1) - Math.abs(corA2 - corB2)) + 1;
+
+
+        while (!isShipPut) {
+            if (checkIfEmpty(corA1, corA2, corB1, corB2, map) && shipSize == givenShipSize) {
+                isShipPut = true;
+                putShip(corA1, corA2, corB1, corB2, map);
+            } else {
+                System.out.println("Error! Wrong length of the Submarine! Try again:");
+                cord = in.nextLine();
+                corA1 = getCord(cord, 1);
+                corA2 = getCord(cord, 2);
+                corB1 = getCord(cord, 3);
+                corB2 = getCord(cord, 4);
+                givenShipSize = Math.abs(Math.abs(corA1 - corB1) - Math.abs(corA2 - corB2)) + 1;
+            }
+        }
+    }
+
+    public static boolean checkIfEmpty(int a1, int a2, int b1, int b2, int[][] map) {
+        int start;
+        int end;
+
+        if (a1 == b1) {
+            start = a2 < b2 ? a2 : b2;
+            end = a2 > b2 ? a2 : b2;
+
+            for (int i = start; i <= end; i++) {
+                if (map[a1][i] == 'O' || map[a1][i == 10 ? i : i + 1] == '0' || map[a1][i - 1] == '0' || map[a1 == 10 ? a1 : a1 + 1][i] == '0' || map[a1 - 1][i] == '0') {
+                    return false;
+                }
+            }
+            return true;
+        } else {
+            start = a1 < b1 ? a1 : b1;
+            end = a1 > b1 ? a1 : b1;
+
+            for (int i = start; i <= end; i++) {
+                if (map[i][a2] == 'O' || map[i == 10 ? i : i + 1][a2] == 'O' || map[i - 1][a2] == 'O' || map[i][a2 == 10 ? a2 : a2 + 1] == 'O' || map[i][a2 - 1] == 'O') {
+                    return false;
+                }
+            }
+            return true;
+        }
+    }
+
+    public static void putShip(int a1, int a2, int b1, int b2, int[][] map) {
+        int start;
+        int end;
+
+        if (a1 == b1) {
+            start = a2 < b2 ? a2 : b2;
+            end = a2 > b2 ? a2 : b2;
+
+            for (int i = start; i <= end; i++) {
+                map[a1][i] = 'O';
+            }
+        } else {
+            start = a1 < b1 ? a1 : b1;
+            end = a1 > b1 ? a1 : b1;
+
+            for (int i = start; i <= end; i++) {
+                map[i][a2] = 'O';
+            }
+        }
+    }
+
+    /**
+     * parse the 2 cord to 2 x and 2 y and return :
+     * if 1 ->x1
+     * if 2 ->y1
+     * if 3 ->x2
+     * if 4 ->y2
+     */
+    public static int getCord(String cor, int corNum) {
+        int i = 0;
+        char c;
+
+        switch (corNum) {
+            case 1:
+                return cor.charAt(0) - '@';
+            case 2:
+                if (cor.charAt(1) == '1') {
+                    if (cor.length() - 1 >= 2 && cor.charAt(2) != ' ') {
+                        System.out.println("The number is: " + (cor.charAt(1) - '0') * 10 + (cor.charAt(2) - '0'));
+                        return (cor.charAt(1) - '0') * 10 + (cor.charAt(2) - '0');
+                    } else {
+                        return 1;
+                    }
+                } else {
+                    return cor.charAt(1) - '0';
+                }
+            case 3:
+                c = cor.charAt(i);
+                while (c != ' ') {
+                    c = cor.charAt(i);
+                    i++;
+                }
+                return cor.charAt(i) - '@';
+            case 4:
+                c = cor.charAt(i);
+                while (c != ' ') {
+                    c = cor.charAt(i);
+                    i++;
+                }
+                i++;
+                if (cor.charAt(i) == '1') {
+                    if (cor.length() - 1 > i + 1) {
+                        return (cor.charAt(1) - '0') * 10 + (cor.charAt(2) - '0');
+                    } else {
+                        return 1;
+                    }
+                } else {
+                    return cor.charAt(i) - '0';
+                }
+            default:
+                return -1;
+        }
+    }
+
+    public static void shipPutOntheMap(int[][] map) {
+
+        shipPlace(map, 5, "Aircraft Carrier");
+        printMap(map);
+
+        shipPlace(map, 4, "Battleship");
+        printMap(map);
+
+        shipPlace(map, 3, "Submarine");
+        printMap(map);
+
+        shipPlace(map, 3, "Cruiser");
+        printMap(map);
+
+        shipPlace(map, 2, "Destroyer");
+        printMap(map);
+    }
+
+    public static boolean cannonShot(int[][] map, int[][] mapFogOfWar, int playerNumber) {
+        String cord;
+        int x = 0;
+        int y = 0;
+        boolean isCorrectCord = false;
+        Scanner in = new Scanner(System.in);
+
+
+        while (!isCorrectCord) {
+            cord = in.nextLine();
+            x = getCord(cord, 1);
+            y = getCord(cord, 2);
+
+            if (x < 11 && y < 11) {
+                isCorrectCord = true;
+            }
+        }
+
+        if (playerNumber == 1) {
+            isSank1 = checkCord(map, mapFogOfWar, x, y, playerNumber);
+            return isSank1;
+        } else {
+            isSank2 = checkCord(map, mapFogOfWar, x, y, playerNumber);
+            return isSank2;
+        }
+
+
+    }
+
+    public static boolean checkIfSunk(int[][] map, int x, int y) {
+        if (x == 10 && y == 10) {
+            if (map[x - 1][y] == 'O' || map[x][y - 1] == 'O') {
+                return false;
+            } else {
+                return true;
+            }
+        } else if (x == 10) {
+            if (map[x - 1][y] == 'O' || map[x][y - 1] == 'O' || map[x][y + 1] == 'O') {
+                return false;
+            } else {
+                return true;
+            }
+        } else if (y == 10) {
+            if (map[x - 1][y] == 'O' || map[x + 1][y] == 'O' || map[x][y - 1] == 'O') {
+                return false;
+            } else {
+                return true;
+            }
+        } else if (map[x - 1][y] == 'O' || map[x][y - 1] == 'O' || map[x][y + 1] == 'O' || map[x + 1][y] == 'O') {
+            return false;
+        } else {
+            return true;
+        }
+    }
+
+    public static boolean checkCord(int[][]map, int[][]mapFogOfWar, int x, int y, int playerNumber) {
+        boolean isSank = false;
+
+        if (map[x][y] == 'O' ||map[x][y] == 'X') {
+
+            if(map[x][y] == 'O') {
+                if (playerNumber == 1) {
+                    shipHits1++;
+                } else {
+                    shipHits2++;
+                }
+            }
+
+            map[x][y] = 'X';
+            mapFogOfWar[x][y] = 'X';
+            isSank = checkIfSunk(map, x, y);
+
+            if (isSank) {
+                System.out.print("You sank a ship! ");
+            } else {
+                System.out.print("You hit a ship! ");
+            }
+        } else {
+            map[x][y] = 'M';
+            mapFogOfWar[x][y] = 'M';
+            printMap(mapFogOfWar);
+            System.out.print("You missed! ");
+        }
+
+        return isSank;
+    }
+
+    public static void passMove() {
+        System.out.println("Press Enter and pass the move to another player");
+        Scanner in = new Scanner(System.in);
+        String passMove;
+        do {
+            passMove = in.nextLine();
+        } while (!passMove.equals(""));
+        System.out.println("\n...");
+    }
+
+    public static void printmapForPlayer(int[][]playerMap, int [][]enemyMapInFog, int playerNumber) {
+        printMap(enemyMapInFog);
+        System.out.println("-----------");
+        printMap(playerMap);
+        System.out.println("Player " + playerNumber + ", it's your turn:");
+    }
+
+    /*public static void sankPrint(int playerNumber)
+    {
+        if (playerNumber == 1) {
+            if (isSank1) {
+                System.out.println("Specify a new target:");
+                isSank1 = false;
+            } else {
+                System.out.println("Try again:");
+            }
+        } else {
+            if (isSank2) {
+                System.out.println("Specify a new target:");
+                isSank2 = false;
+            } else {
+                System.out.println("Try again:");
+            }
+        }
+    }*/
+}
